@@ -1,6 +1,21 @@
 import Image from "next/image";
 import localFont from "next/font/local";
-
+import { FaSquareXTwitter } from "react-icons/fa6";
+import { useCurrentUser } from "@/hooks/user";
+import { useQueryClient } from "@tanstack/react-query";
+import FeedCard from "@/components/FeedCard";
+import { BiImageAlt } from "react-icons/bi";
+import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
+import { useCallback,useState } from "react";
+import toast from "react-hot-toast";
+import Twitterlayout from "@/components/FeedCard/Layout/TwitterLayout";
+import { GetServerSideProps } from "next";
+import { graphqlClient } from "@/clients/api";
+import { GetAllTweetsQuery } from "@/gql/graphql";
+import { verifyUserGoogleTokenQuery } from "@/graphql/query/user";
+import { useCreateTweet, useGetAllTweets } from "@/hooks/tweet";
+import { Tweet } from "@/gql/graphql";
+import { getAllTweetsQuery } from "@/graphql/query/tweet";
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -12,104 +27,80 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-export default function Home() {
-  return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              pages/index.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+interface HomeProps {
+  tweets?: Tweet[];
+}
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+export default function Home(props: HomeProps) {
+  const { user } = useCurrentUser();
+  
+  const { mutate } = useCreateTweet();
+
+
+  const [content, setContent] = useState("");
+  const handleSelectImage = useCallback(() => {
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.setAttribute("accept", "image/*");
+    input.click();
+  }, []);
+  const handleCreateTweet = useCallback(() => {
+    mutate({
+      content,
+    });
+  }, [content, mutate]);
+return (
+    <div>
+      <Twitterlayout>
+      <div>
+          <div className="border border-r-0 border-l-0 border-b-0 border-gray-600 p-5 hover:bg-slate-900 transition-all cursor-pointer">
+            <div className="grid grid-cols-12 gap-3">
+              <div className="col-span-1">
+                {user?.profileImageURL && (
+                  <Image
+                    className="rounded-full"
+                    src={user?.profileImageURL}
+                    alt="user-image"
+                    height={50}
+                    width={50}
+                  />
+                )}
+              </div>
+              <div className="col-span-11">
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="w-full bg-transparent text-xl px-3 border-b border-slate-700"
+                  placeholder="What's happening?"
+                  rows={3}
+                ></textarea>
+                <div className="mt-2 flex justify-between items-center">
+                  <BiImageAlt onClick={handleSelectImage} className="text-xl" />
+                  <button
+                    onClick={handleCreateTweet}
+                    className="bg-[#1d9bf0] font-semibold text-sm py-2 px-4 rounded-full"
+                  >
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+          {props.tweets?.map((tweet) =>
+          tweet ? <FeedCard key={tweet?.id} data={tweet as Tweet} /> : null
+        )}
+      </Twitterlayout>
     </div>
   );
 }
+export const getServerSideProps: GetServerSideProps<HomeProps> = async (
+  context
+) => {
+  const allTweets = await graphqlClient.request(getAllTweetsQuery);
+  return {
+    props: {
+      tweets: allTweets.getAllTweets as Tweet[],
+    },
+  };
+};
