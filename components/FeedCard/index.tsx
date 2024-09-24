@@ -31,6 +31,10 @@ return (
             </Link>
           </h5>
           <p>{data.content}</p>
+          {data.imageURL && (
+            <Image src={data.imageURL} alt="image" width={400} height={400} />
+          )}
+
           <div className="flex justify-between mt-5 text-xl items-center p-2 w-[90%]">
             <div>
               <BiMessageRounded />

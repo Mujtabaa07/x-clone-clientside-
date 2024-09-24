@@ -1,31 +1,20 @@
 import Image from "next/image";
-import localFont from "next/font/local";
-import { FaSquareXTwitter } from "react-icons/fa6";
+
 import { useCurrentUser } from "@/hooks/user";
-import { useQueryClient } from "@tanstack/react-query";
 import FeedCard from "@/components/FeedCard";
 import { BiImageAlt } from "react-icons/bi";
-import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
-import { useCallback,useState } from "react";
-import toast from "react-hot-toast";
+import { useCallback,useState,useEffect } from "react";
 import Twitterlayout from "@/components/FeedCard/Layout/TwitterLayout";
 import { GetServerSideProps } from "next";
 import { graphqlClient } from "@/clients/api";
-import { GetAllTweetsQuery } from "@/gql/graphql";
-import { verifyUserGoogleTokenQuery } from "@/graphql/query/user";
 import { useCreateTweet, useGetAllTweets } from "@/hooks/tweet";
 import { Tweet } from "@/gql/graphql";
-import { getAllTweetsQuery } from "@/graphql/query/tweet";
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
+import cors from "cors";
+
+import { getAllTweetsQuery,getSignedURLForTweetQuery } from "@/graphql/query/tweet";
+import axios from "axios";
+import { toast } from "react-hot-toast";
+
 
 interface HomeProps {
   tweets?: Tweet[];
@@ -34,21 +23,58 @@ interface HomeProps {
 export default function Home(props: HomeProps) {
   const { user } = useCurrentUser();
   
-  const { mutate } = useCreateTweet();
+  
+  const { tweets = props.tweets as Tweet[] } = useGetAllTweets();
+  const { mutateAsync } = useCreateTweet();
 
 
   const [content, setContent] = useState("");
+  const [imageURL, setImageURL] = useState("");
+  const handleInputChangeFile = useCallback((input: HTMLInputElement) => {
+    return async (event: Event) => {
+      event.preventDefault();
+      const file: File | null | undefined = input.files?.item(0);
+      if (!file) return;
+      const { getSignedURLForTweet } = await graphqlClient.request(
+        getSignedURLForTweetQuery,
+        {
+          imageName: file.name,
+          imageType: file.type,
+        }
+      );
+      if (getSignedURLForTweet) {
+        toast.loading("Uploading...", { id: "2" });
+        await axios.put(getSignedURLForTweet, file, {
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+        toast.success("Upload Completed", { id: "2" });
+        const url = new URL(getSignedURLForTweet);
+        const myFilePath = `${url.origin}${url.pathname}`;
+        setImageURL(myFilePath);
+      }
+    };
+  }, []);
+
   const handleSelectImage = useCallback(() => {
     const input = document.createElement("input");
     input.setAttribute("type", "file");
     input.setAttribute("accept", "image/*");
+
+    const handlerFn = handleInputChangeFile(input);
+    input.addEventListener("change", handlerFn);
+
     input.click();
-  }, []);
-  const handleCreateTweet = useCallback(() => {
-    mutate({
+  }, [handleInputChangeFile]);
+  const handleCreateTweet = useCallback(async() => {
+    await mutateAsync({
       content,
+      imageURL,
     });
-  }, [content, mutate]);
+    setContent("");
+    setImageURL("");
+  }, [content, mutateAsync,imageURL]);
 return (
     <div>
       <Twitterlayout>
@@ -74,6 +100,14 @@ return (
                   placeholder="What's happening?"
                   rows={3}
                 ></textarea>
+                {imageURL && (
+                  <Image
+                    src={imageURL}
+                    alt="tweet-image"
+                    width={300}
+                    height={300}
+                  />
+                )}
                 <div className="mt-2 flex justify-between items-center">
                   <BiImageAlt onClick={handleSelectImage} className="text-xl" />
                   <button
@@ -87,7 +121,7 @@ return (
             </div>
           </div>
           </div>
-          {props.tweets?.map((tweet) =>
+          {tweets?.map((tweet) =>
           tweet ? <FeedCard key={tweet?.id} data={tweet as Tweet} /> : null
         )}
       </Twitterlayout>
