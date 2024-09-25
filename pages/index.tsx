@@ -3,13 +3,13 @@ import Image from "next/image";
 import { useCurrentUser } from "@/hooks/user";
 import FeedCard from "@/components/FeedCard";
 import { BiImageAlt } from "react-icons/bi";
-import { useCallback,useState,useEffect } from "react";
+import { useCallback,useState } from "react";
 import Twitterlayout from "@/components/FeedCard/Layout/TwitterLayout";
 import { GetServerSideProps } from "next";
 import { graphqlClient } from "@/clients/api";
 import { useCreateTweet, useGetAllTweets } from "@/hooks/tweet";
 import { Tweet } from "@/gql/graphql";
-import cors from "cors";
+
 
 import { getAllTweetsQuery,getSignedURLForTweetQuery } from "@/graphql/query/tweet";
 import axios from "axios";
@@ -129,7 +129,6 @@ return (
   );
 }
 export const getServerSideProps: GetServerSideProps<HomeProps> = async (
-  context
 ) => {
   const allTweets = await graphqlClient.request(getAllTweetsQuery);
   return {

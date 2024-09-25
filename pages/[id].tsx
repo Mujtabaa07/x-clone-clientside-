@@ -1,4 +1,4 @@
-import { useRouter } from "next/router";
+
 import Twitterlayout from "@/components/FeedCard/Layout/TwitterLayout";
 import Image from "next/image";
 import type { GetServerSideProps, NextPage } from "next";
@@ -20,7 +20,6 @@ interface ServerProps {
 }
 
 const UserProfilePage: NextPage<ServerProps> = (props) => {
-  const router = useRouter();
   const { user: currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
   const amIFollowing = useMemo(() => {
@@ -49,7 +48,7 @@ const UserProfilePage: NextPage<ServerProps> = (props) => {
       <Twitterlayout>
         <div>
           <nav className="flex items-center gap-3 py-3 px-3">
-            <BsArrowLeftShort className="text-4xl" />
+            <BsArrowLeftShort className="text-4xl"/>
             <div>
               
               <h1 className="text-2xl font-bold">
